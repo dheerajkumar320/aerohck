@@ -1,4 +1,3 @@
-
 class RubiksCube {
     constructor() {
         this.scene = new THREE.Scene();
@@ -11,7 +10,7 @@ class RubiksCube {
         // Add lighting
         const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         this.scene.add(ambientLight);
-        
+
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(10, 10, 5);
         this.scene.add(directionalLight);
@@ -60,13 +59,13 @@ class RubiksCube {
                     const geometry = new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize);
                     const materials = this.createCubeMaterials(x, y, z);
                     const cube = new THREE.Mesh(geometry, materials);
-                    
+
                     cube.position.set(
                         (x - 1) * (pieceSize + gap),
                         (y - 1) * (pieceSize + gap),
                         (z - 1) * (pieceSize + gap)
                     );
-                    
+
                     cube.userData = { x, y, z };
                     this.pieces.push(cube);
                     this.cubeGroup.add(cube);
@@ -77,32 +76,32 @@ class RubiksCube {
 
     createCubeMaterials(x, y, z) {
         const materials = [];
-        
+
         // Right face (x = 2)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: x === 2 ? this.colorMap['R'] : 0x000000 
         }));
-        
+
         // Left face (x = 0)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: x === 0 ? this.colorMap['L'] : 0x000000 
         }));
-        
+
         // Top face (y = 2)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: y === 2 ? this.colorMap['U'] : 0x000000 
         }));
-        
+
         // Bottom face (y = 0)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: y === 0 ? this.colorMap['D'] : 0x000000 
         }));
-        
+
         // Front face (z = 2)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: z === 2 ? this.colorMap['F'] : 0x000000 
         }));
-        
+
         // Back face (z = 0)
         materials.push(new THREE.MeshLambertMaterial({ 
             color: z === 0 ? this.colorMap['B'] : 0x000000 
@@ -159,54 +158,61 @@ class RubiksCube {
     }
 
     async shuffleCube() {
-        if (this.isAnimating) return;
-        
+        this.isAnimating = true;
         this.updateStatus('Shuffling cube...', '#ff9800');
-        
+
         try {
             const response = await fetch('/shuffle', { method: 'POST' });
             const data = await response.json();
-            
-            this.updateCubeFromState(data.state);
-            this.updateStatus('Cube shuffled! Ready to solve.', '#4CAF50');
+
+            if (data.error) {
+                this.updateStatus(`Error: ${data.error}`, '#f44336');
+            } else if (data.state) {
+                this.updateCubeFromState(data.state);
+                this.updateStatus('Cube shuffled!', '#4CAF50');
+            }
         } catch (error) {
+            console.error('Shuffle error:', error);
             this.updateStatus('Error shuffling cube', '#f44336');
         }
+
+        this.isAnimating = false;
     }
 
     async solveCube() {
-        if (this.isAnimating) return;
-        
         this.isAnimating = true;
-        this.updateStatus('Solving cube...', '#2196F3');
-        
+        this.updateStatus('Solving cube...', '#ff9800');
+
         try {
             const response = await fetch('/solve', { method: 'POST' });
-            const data = await response.json();
-            
-            if (data.error) {
-                this.updateStatus(`Error: ${data.error}`, '#f44336');
-                this.isAnimating = false;
-                return;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
-            await this.animateSolution(data.solution);
-            this.updateStatus('Cube solved! 🎉', '#4CAF50');
+
+            const data = await response.json();
+
+            if (data.solution) {
+                this.updateStatus(`Solution: ${data.solution}`, '#4CAF50');
+                // Here you could animate the solution moves
+            } else if (data.error) {
+                this.updateStatus(`Error: ${data.error}`, '#f44336');
+            }
         } catch (error) {
+            console.error('Solve error:', error);
             this.updateStatus('Error solving cube', '#f44336');
         }
-        
+
         this.isAnimating = false;
     }
 
     async animateSolution(solutionString) {
         const moves = solutionString.split(' ');
         this.updateStatus(`Animating solution: ${moves.length} moves`, '#2196F3');
-        
+
         for (let i = 0; i < moves.length; i++) {
             await this.animateMove(moves[i]);
             await this.delay(500); // Pause between moves
-            
+
             this.updateStatus(`Move ${i + 1}/${moves.length}: ${moves[i]}`, '#2196F3');
         }
     }
@@ -217,7 +223,7 @@ class RubiksCube {
         const axis = move[0];
         const angle = move.includes("'") ? -Math.PI/2 : Math.PI/2;
         const iterations = move.includes('2') ? 2 : 1;
-        
+
         for (let i = 0; i < iterations; i++) {
             await this.rotateCube(axis, angle);
         }
@@ -227,7 +233,7 @@ class RubiksCube {
         return new Promise(resolve => {
             const startRotation = this.cubeGroup.rotation.clone();
             const endRotation = startRotation.clone();
-            
+
             switch(axis) {
                 case 'U':
                 case 'D':
@@ -242,24 +248,24 @@ class RubiksCube {
                     endRotation.z += angle;
                     break;
             }
-            
+
             const duration = 300;
             const startTime = Date.now();
-            
+
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 const eased = this.easeInOutCubic(progress);
-                
+
                 this.cubeGroup.rotation.copy(startRotation.clone().lerp(endRotation, eased));
-                
+
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     resolve();
                 }
             };
-            
+
             animate();
         });
     }
@@ -289,11 +295,11 @@ class RubiksCube {
         document.getElementById('shuffleBtn').addEventListener('click', () => {
             if (!this.isAnimating) this.shuffleCube();
         });
-        
+
         document.getElementById('solveBtn').addEventListener('click', () => {
             if (!this.isAnimating) this.solveCube();
         });
-        
+
         document.getElementById('resetBtn').addEventListener('click', () => {
             this.resetView();
         });

@@ -23,12 +23,16 @@ def shuffle_cube():
 def solve_cube():
     global current_cube_state
     try:
+        # Validate cube state format
+        if len(current_cube_state) != 54:
+            return jsonify({'error': 'Invalid cube state length'})
+        
         solution = pykociemba.solve(current_cube_state)
         if solution.startswith("Error"):
             return jsonify({'error': solution})
         return jsonify({'solution': solution})
     except Exception as e:
-        return jsonify({'error': str(e)})
+        return jsonify({'error': f'Solver error: {str(e)}'})
 
 @app.route('/get_state', methods=['GET'])
 def get_state():
@@ -37,9 +41,27 @@ def get_state():
 @app.route('/set_state', methods=['POST'])
 def set_state():
     global current_cube_state
-    data = request.get_json()
-    current_cube_state = data.get('state', current_cube_state)
-    return jsonify({'status': 'success'})
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+        
+        new_state = data.get('state')
+        if not new_state:
+            return jsonify({'error': 'No state provided'}), 400
+        
+        if len(new_state) != 54:
+            return jsonify({'error': 'Invalid cube state length (must be 54 characters)'}), 400
+        
+        # Basic validation - check if contains only valid face characters
+        valid_chars = set('UDRLFB')
+        if not all(c in valid_chars for c in new_state):
+            return jsonify({'error': 'Invalid characters in cube state (must be U,D,R,L,F,B only)'}), 400
+        
+        current_cube_state = new_state
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
