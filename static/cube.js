@@ -193,7 +193,8 @@ class RubiksCube {
 
             if (data.solution) {
                 this.updateStatus(`Solution: ${data.solution}`, '#4CAF50');
-                // Here you could animate the solution moves
+                await this.delay(1000); // Brief pause before animation
+                await this.animateSolution(data.solution);
             } else if (data.error) {
                 this.updateStatus(`Error: ${data.error}`, '#f44336');
             }
@@ -206,68 +207,149 @@ class RubiksCube {
     }
 
     async animateSolution(solutionString) {
-        const moves = solutionString.split(' ');
+        const moves = solutionString.trim().split(' ').filter(move => move !== '');
         this.updateStatus(`Animating solution: ${moves.length} moves`, '#2196F3');
 
         for (let i = 0; i < moves.length; i++) {
-            await this.animateMove(moves[i]);
-            await this.delay(500); // Pause between moves
-
-            this.updateStatus(`Move ${i + 1}/${moves.length}: ${moves[i]}`, '#2196F3');
+            if (moves[i]) {
+                await this.animateMove(moves[i]);
+                await this.delay(600); // Pause between moves
+                this.updateStatus(`Move ${i + 1}/${moves.length}: ${moves[i]}`, '#2196F3');
+            }
         }
+        
+        this.updateStatus('Solution animation complete!', '#4CAF50');
     }
 
     async animateMove(move) {
-        // Simple rotation animation for the entire cube group
-        // In a full implementation, you'd rotate specific faces
-        const axis = move[0];
-        const angle = move.includes("'") ? -Math.PI/2 : Math.PI/2;
-        const iterations = move.includes('2') ? 2 : 1;
+        if (!move || move === '') return;
+        
+        const face = move[0];
+        const isPrime = move.includes("'");
+        const isDouble = move.includes('2');
+        const angle = isPrime ? Math.PI/2 : -Math.PI/2;
+        const iterations = isDouble ? 2 : 1;
 
         for (let i = 0; i < iterations; i++) {
-            await this.rotateCube(axis, angle);
+            await this.rotateFace(face, angle);
         }
     }
 
-    async rotateCube(axis, angle) {
+    async rotateFace(face, angle) {
         return new Promise(resolve => {
-            const startRotation = this.cubeGroup.rotation.clone();
-            const endRotation = startRotation.clone();
-
-            switch(axis) {
-                case 'U':
-                case 'D':
-                    endRotation.y += angle;
-                    break;
-                case 'R':
-                case 'L':
-                    endRotation.x += angle;
-                    break;
-                case 'F':
-                case 'B':
-                    endRotation.z += angle;
-                    break;
-            }
-
+            // Get pieces that belong to this face
+            const facePieces = this.getFacePieces(face);
+            
+            // Create a temporary group for rotation
+            const rotationGroup = new THREE.Group();
+            this.scene.add(rotationGroup);
+            
+            // Move pieces to rotation group
+            facePieces.forEach(piece => {
+                this.cubeGroup.remove(piece);
+                rotationGroup.add(piece);
+            });
+            
+            // Set rotation axis
+            const axis = this.getRotationAxis(face);
+            
             const duration = 300;
             const startTime = Date.now();
-
+            
             const animate = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 const eased = this.easeInOutCubic(progress);
-
-                this.cubeGroup.rotation.copy(startRotation.clone().lerp(endRotation, eased));
-
+                
+                const currentAngle = angle * eased;
+                rotationGroup.rotation.setFromVector3(axis.clone().multiplyScalar(currentAngle));
+                
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
+                    // Apply final rotation to pieces and move back to cube group
+                    facePieces.forEach(piece => {
+                        // Apply the rotation matrix to piece position
+                        piece.position.applyAxisAngle(axis, angle);
+                        piece.position.round(); // Snap to grid
+                        
+                        // Update piece rotation
+                        piece.rotateOnWorldAxis(axis, angle);
+                        
+                        rotationGroup.remove(piece);
+                        this.cubeGroup.add(piece);
+                    });
+                    
+                    this.scene.remove(rotationGroup);
+                    this.updatePieceUserData();
                     resolve();
                 }
             };
-
+            
             animate();
         });
+    }
+
+    getFacePieces(face) {
+        const pieces = [];
+        
+        this.pieces.forEach(piece => {
+            const { x, y, z } = piece.userData;
+            
+            switch(face) {
+                case 'U': // Up face
+                    if (y === 2) pieces.push(piece);
+                    break;
+                case 'D': // Down face
+                    if (y === 0) pieces.push(piece);
+                    break;
+                case 'R': // Right face
+                    if (x === 2) pieces.push(piece);
+                    break;
+                case 'L': // Left face
+                    if (x === 0) pieces.push(piece);
+                    break;
+                case 'F': // Front face
+                    if (z === 2) pieces.push(piece);
+                    break;
+                case 'B': // Back face
+                    if (z === 0) pieces.push(piece);
+                    break;
+            }
+        });
+        
+        return pieces;
+    }
+
+    getRotationAxis(face) {
+        switch(face) {
+            case 'U': return new THREE.Vector3(0, 1, 0);  // Y axis
+            case 'D': return new THREE.Vector3(0, -1, 0); // -Y axis
+            case 'R': return new THREE.Vector3(1, 0, 0);  // X axis
+            case 'L': return new THREE.Vector3(-1, 0, 0); // -X axis
+            case 'F': return new THREE.Vector3(0, 0, 1);  // Z axis
+            case 'B': return new THREE.Vector3(0, 0, -1); // -Z axis
+            default: return new THREE.Vector3(0, 1, 0);
+        }
+    }
+
+    updatePieceUserData() {
+        // Update piece userData to reflect new positions
+        this.pieces.forEach(piece => {
+            const pos = piece.position;
+            piece.userData.x = Math.round(pos.x) + 1;
+            piece.userData.y = Math.round(pos.y) + 1;
+            piece.userData.z = Math.round(pos.z) + 1;
+        });
+    }
+
+    async performMove(moveString) {
+        if (!this.isAnimating) {
+            this.isAnimating = true;
+            await this.animateMove(moveString);
+            this.updateStatus(`Executed move: ${moveString}`, '#4CAF50');
+            this.isAnimating = false;
+        }
     }
 
     easeInOutCubic(t) {
@@ -302,6 +384,28 @@ class RubiksCube {
 
         document.getElementById('resetBtn').addEventListener('click', () => {
             this.resetView();
+        });
+
+        // Add manual move controls
+        document.addEventListener('keydown', (event) => {
+            if (this.isAnimating) return;
+            
+            const key = event.key.toLowerCase();
+            let move = '';
+            
+            switch(key) {
+                case 'u': move = event.shiftKey ? "U'" : 'U'; break;
+                case 'r': move = event.shiftKey ? "R'" : 'R'; break;
+                case 'f': move = event.shiftKey ? "F'" : 'F'; break;
+                case 'd': move = event.shiftKey ? "D'" : 'D'; break;
+                case 'l': move = event.shiftKey ? "L'" : 'L'; break;
+                case 'b': move = event.shiftKey ? "B'" : 'B'; break;
+            }
+            
+            if (move) {
+                event.preventDefault();
+                this.performMove(move);
+            }
         });
 
         window.addEventListener('resize', () => {
