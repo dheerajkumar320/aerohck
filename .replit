@@ -2,3 +2,15 @@ modules = ["python-3.12"]
 
 [nix]
 channel = "stable-25_05"
+
+[workflows]
+runButton = "Run Cube App"
+
+[[workflows.workflow]]
+name = "Run Cube App"
+author = 39623914
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python app.py"
