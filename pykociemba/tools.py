@@ -75,3 +75,23 @@ def randomLastLayerCube():
             break
     fc = cc.toFaceCube()
     return fc.to_String()
+
+def random_scramble(length=20):
+    """
+    Generate a random scramble sequence (list of moves as strings).
+    Default length is 20 moves.
+    """
+    moves = ['U', "U'", 'U2', 'R', "R'", 'R2', 'F', "F'", 'F2',
+             'D', "D'", 'D2', 'L', "L'", 'L2', 'B', "B'", 'B2']
+    faces = ['U', 'R', 'F', 'D', 'L', 'B']
+    scramble = []
+    prev_face = None
+    for _ in range(length):
+        while True:
+            move = random.choice(moves)
+            face = move[0]
+            if face != prev_face:
+                scramble.append(move)
+                prev_face = face
+                break
+    return scramble

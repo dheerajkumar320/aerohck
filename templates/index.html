@@ -80,9 +80,10 @@
         }
         
         #container {
-            width: 100%;
-            max-width: 500px;
-            aspect-ratio: 1 / 1; 
+            width: 30em;
+            height: 30em;
+            max-width: none;
+            aspect-ratio: unset;
             position: relative;
         }
 
@@ -199,6 +200,8 @@
                     <button id="solveBtn">✨ Solve Cube</button>
                     <div id="status">Ready to play!</div>
                 </div>
+
+                <div id="solutionString" style="display:none; margin-top:1.2rem; font-size:1.35rem; font-weight:bold; color:#f759c5; text-align:center;"></div>
 
                 <div id="stats-dashboard">
                     <div class="stat-item"><strong>Solve Time:</strong> <span id="solveTime">N/A</span></div>

@@ -1,4 +1,85 @@
 class RubiksCube {
+    // --- Move application logic ---
+    // Map move string to axis and layer
+    static MOVE_MAP = {
+        'U': { axis: 'y', layer: 2, angle: Math.PI / 2 },
+        "U'": { axis: 'y', layer: 2, angle: -Math.PI / 2 },
+        'U2': { axis: 'y', layer: 2, angle: Math.PI },
+        'D': { axis: 'y', layer: 0, angle: Math.PI / 2 },
+        "D'": { axis: 'y', layer: 0, angle: -Math.PI / 2 },
+        'D2': { axis: 'y', layer: 0, angle: Math.PI },
+        'R': { axis: 'x', layer: 2, angle: Math.PI / 2 },
+        "R'": { axis: 'x', layer: 2, angle: -Math.PI / 2 },
+        'R2': { axis: 'x', layer: 2, angle: Math.PI },
+        'L': { axis: 'x', layer: 0, angle: Math.PI / 2 },
+        "L'": { axis: 'x', layer: 0, angle: -Math.PI / 2 },
+        'L2': { axis: 'x', layer: 0, angle: Math.PI },
+        'F': { axis: 'z', layer: 2, angle: Math.PI / 2 },
+        "F'": { axis: 'z', layer: 2, angle: -Math.PI / 2 },
+        'F2': { axis: 'z', layer: 2, angle: Math.PI },
+        'B': { axis: 'z', layer: 0, angle: Math.PI / 2 },
+        "B'": { axis: 'z', layer: 0, angle: -Math.PI / 2 },
+        'B2': { axis: 'z', layer: 0, angle: Math.PI },
+    };
+
+    // Apply a single move to the cube (instant, not animated)
+    applyMove(moveString) {
+        const move = RubiksCube.MOVE_MAP[moveString];
+        if (!move) return;
+        const { axis, layer, angle } = move;
+        // Find pieces in the layer and rotate them
+        this.pieces.forEach(piece => {
+            const { x, y, z } = piece.userData;
+            let match = false;
+            if (axis === 'x' && x === layer) match = true;
+            if (axis === 'y' && y === layer) match = true;
+            if (axis === 'z' && z === layer) match = true;
+            if (match) {
+                // Apply rotation to piece position
+                this.rotatePiece(piece, axis, angle);
+            }
+        });
+        // Update userData for all pieces to reflect new logical positions
+        this.updatePiecePositions(axis, layer, angle);
+        // Optionally, update the cube's facelet colors if you track state
+        // this.updateCubeFromState(this.currentStateString);
+    }
+
+    // Rotate a piece's position in 3D space (visual only)
+    rotatePiece(piece, axis, angle) {
+        const pos = piece.position;
+        let { x, y, z } = pos;
+        if (axis === 'x') {
+            const y1 = y * Math.cos(angle) - z * Math.sin(angle);
+            const z1 = y * Math.sin(angle) + z * Math.cos(angle);
+            piece.position.y = y1;
+            piece.position.z = z1;
+        } else if (axis === 'y') {
+            const x1 = x * Math.cos(angle) + z * Math.sin(angle);
+            const z1 = -x * Math.sin(angle) + z * Math.cos(angle);
+            piece.position.x = x1;
+            piece.position.z = z1;
+        } else if (axis === 'z') {
+            const x1 = x * Math.cos(angle) - y * Math.sin(angle);
+            const y1 = x * Math.sin(angle) + y * Math.cos(angle);
+            piece.position.x = x1;
+            piece.position.y = y1;
+        }
+        // Optionally, rotate the mesh itself for visual effect
+        // piece.rotation[axis] += angle;
+    }
+
+    // Update userData for all pieces after a move (to keep logical positions correct)
+    updatePiecePositions(axis, layer, angle) {
+        // This is a placeholder. For a real cube, you need to permute userData (x,y,z) for affected pieces.
+        // For a full implementation, you would update the logical state here.
+        // This is non-trivial and would require a mapping of piece indices.
+    }
+
+    // Apply a sequence of moves (array of move strings)
+    applyMoves(moveList) {
+        moveList.forEach(move => this.applyMove(move));
+    }
     constructor() {
         this.scene = new THREE.Scene();
         const container = document.getElementById('container');
@@ -23,8 +104,9 @@ class RubiksCube {
         this.controls.dampingFactor = 0.1;
         this.controls.autoRotate = true;
         this.controls.autoRotateSpeed = 0.5;
+        this.controls.enableZoom = false;
 
-        this.camera.position.set(5, 5, 5);
+        this.camera.position.set(4,4, 4);
         this.controls.update();
 
         this.cubeGroup = new THREE.Group();
@@ -66,7 +148,7 @@ class RubiksCube {
         this.pieces.forEach(piece => this.cubeGroup.remove(piece));
         this.pieces = [];
 
-        const pieceSize = 0.95;
+        const pieceSize = 1.2;
         const gap = 0.05;
 
         for (let x = 0; x < 3; x++) {
@@ -150,18 +232,23 @@ class RubiksCube {
         try {
             const response = await fetch('/solve', { method: 'POST' });
             const data = await response.json();
+            const solutionDiv = document.getElementById('solutionString');
             if (data.solution) {
                 document.getElementById('solveTime').textContent = `${data.solve_time} ms`;
                 document.getElementById('solutionLength').textContent = `${data.solution_length} moves`;
                 this.renderSolutionChart(data.phase1_moves, data.phase2_moves);
                 this.updateStatus(`Solution Found: ${data.solution}`, '#4CAF50');
+                solutionDiv.textContent = `Solution: ${data.solution}`;
+                solutionDiv.style.display = 'block';
                 await this.animateSolution(data.solution);
                 await this.syncWithBackend();
             } else {
                 this.updateStatus(data.error || 'Error solving cube', '#f44336');
+                solutionDiv.style.display = 'none';
             }
         } catch (error) {
             this.updateStatus('Error connecting to solver', '#f44336');
+            document.getElementById('solutionString').style.display = 'none';
         }
         this.isAnimating = false;
     }
