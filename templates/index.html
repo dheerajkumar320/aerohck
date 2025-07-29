@@ -3,163 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive 3D Rubik's Cube</title>
+    <title>AI Rubik's Cube Solver</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --background-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --text-secondary-color: #b0b0b0;
+            --accent-color: #ff8e53;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: #0f0c29; /* fallback for old browsers */
-            background: -webkit-linear-gradient(to right, #24243e, #302b63, #0f0c29);
-            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
+            background: var(--background-color);
+            background: -webkit-linear-gradient(to right, #0f0c29, #302b63, #24243e);
+            background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
+            overflow-x: hidden;
         }
 
         #main-wrapper {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 2rem;
             box-sizing: border-box;
+        }
+
+        header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: -webkit-linear-gradient(var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-secondary-color);
+            font-style: italic;
+        }
+
+        #content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1400px;
         }
 
         #cube-section {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            position: relative;
-            min-width: 400px;
+            /* background: var(--surface-color); */ /* Removed background */
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
-
+        
         #container {
-            width: 400px;
-            height: 400px;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1; 
             position: relative;
-        }
-
-        #info-section {
-            flex: 1;
-            padding: 0 40px;
-            max-width: 600px;
         }
 
         #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-        }
-        
-        h3 {
-            margin-top: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 10px;
+            margin-top: 2rem;
+            text-align: center;
         }
 
         button {
-            background: linear-gradient(45deg, #fe6b8b 30%, #ff8e53 90%);
+            background: linear-gradient(45deg, var(--primary-color) 30%, var(--secondary-color) 90%);
             color: white;
             border: none;
-            padding: 12px 24px;
-            margin: 5px;
-            border-radius: 8px;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 50px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 1rem;
+            font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
         }
 
         button:disabled {
-            background: #cccccc;
+            background: #555;
             cursor: not-allowed;
             transform: none;
         }
 
         #status {
-            margin-top: 15px;
-            padding: 10px;
+            margin-top: 1.5rem;
+            padding: 12px 20px;
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            font-weight: bold;
+            border-radius: 10px;
+            font-weight: 400;
             text-align: center;
+            min-height: 24px;
         }
 
-        #content {
-            padding: 50px;
-            max-width: 800px;
-            margin: 0 auto;
+        #stats-dashboard {
+            margin-top: 1.5rem;
+            padding: 1rem;
             background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .stat-item {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .stat-item strong {
+            color: var(--accent-color);
+        }
+
+        #info-section {
+            flex: 1;
+            padding: 2rem;
+            background: var(--surface-color);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         .section {
-            margin-bottom: 40px;
+            margin-bottom: 2rem;
         }
 
         .section h2 {
-            border-bottom: 2px solid #ff8e53;
+            border-bottom: 3px solid var(--accent-color);
             padding-bottom: 10px;
             margin-bottom: 20px;
+            font-size: 1.8rem;
+            font-weight: 600;
         }
 
-        .section p {
-            line-height: 1.6;
+        .section p, .section li {
+            line-height: 1.8;
+            color: var(--text-secondary-color);
+            font-size: 1rem;
+        }
+
+        .section ul {
+            padding-left: 20px;
+        }
+
+        @media (max-width: 992px) {
+            #content-area {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div id="main-wrapper">
-        <div id="cube-section">
-            <div id="container"></div>
-            <div id="controls">
-                <h3>Rubik's Cube Controller</h3>
-                <button id="shuffleBtn">🔀 Shuffle Cube</button>
-                <button id="solveBtn">✨ Solve Cube</button>
-                <div id="status">Ready to play!</div>
+        <header>
+            <h1>Rubik's Cube Algorithm</h1>
+            <p>- Dheeraj Anagandula</p>
+        </header>
+
+        <div id="content-area">
+            <div id="cube-section">
+                <div id="container"></div>
+                <div id="controls">
+                    <button id="shuffleBtn">🔀 Shuffle Cube</button>
+                    <button id="solveBtn">✨ Solve Cube</button>
+                    <div id="status">Ready to play!</div>
+                </div>
+
+                <div id="stats-dashboard">
+                    <div class="stat-item"><strong>Solve Time:</strong> <span id="solveTime">N/A</span></div>
+                    <div class="stat-item"><strong>Solution Length:</strong> <span id="solutionLength">N/A</span></div>
+                </div>
+                <canvas id="solutionChart" width="400" height="100"></canvas>
             </div>
-        </div>
-        <div id="info-section">
-            <div class="section">
-                <h2>The Algorithm</h2>
-                <p>The solver uses the Kociemba algorithm, a two-phase algorithm that finds near-optimal solutions for the Rubik's Cube. It first solves the cube into a state where only moves of U, D, R2, L2, F2, B2 are needed, and then solves the remaining state.</p>
-            </div>
-            <div class="section">
-                <h2>Our Approach</h2>
-                <p>We implemented a 3D representation of the cube using Three.js. The cube's state is managed on the backend with a Python server using Flask. When the user requests a solve, the current state string is sent to the backend, which uses the `pykociemba` library to find a solution. The solution is then sent back to the frontend to be animated.</p>
-            </div>
-            <div class="section">
-                <h2>Hurdles Faced</h2>
-                <p>One of the main challenges was correctly mapping the 3D cube's visual state to the 1D string representation required by the Kociemba algorithm. Ensuring the rotations in the 3D animation and the state string remained synchronized was also a complex task that required careful state management on both the client and server.</p>
-            </div>
-            <div class="section">
-                <h2>Cube Representation</h2>
-                <p>The cube is represented as a 54-character string, with each character corresponding to a color on a facelet. The order of the faces in the string is Up, Right, Front, Down, Left, Back (U, R, F, D, L, B).</p>
+
+            <div id="info-section">
+                <div class="section">
+                    <h2>The Algorithm: Kociemba's Two-Phase Method</h2>
+                    <p>The solver utilizes Herbert Kociemba's two-phase algorithm, a highly efficient method renowned for finding near-optimal solutions to the Rubik's Cube. The algorithm strategically divides the solving process into two distinct stages:</p>
+                    <ul>
+                        <li><strong>Phase 1:</strong> The cube is manipulated into a specific subgroup of cube states. In this state, the orientation of all corners and edges is correct, and the middle layer edges are in the correct slice. This is achieved using a wide range of moves.</li>
+                        <li><strong>Phase 2:</strong> From this intermediate state, the cube is fully solved using a more restricted set of moves (e.g., only 180-degree turns of faces).</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>Algorithmic Complexity</h2>
+                    <p>Understanding the performance characteristics of the solving algorithm is key:</p>
+                    <ul>
+                        <li><strong>Time Complexity:</strong> For a standard 3x3x3 Rubik's Cube, the input size is fixed. Consequently, any algorithm will solve it in a constant amount of time, making the complexity O(1). The Kociemba algorithm is exceptionally fast, typically finding solutions in under 20 moves within milliseconds. This is because it doesn't search the entire state space but uses pre-computed tables to find a short path to the solved state.</li>
+                        <li><strong>Space Complexity:</strong> The speed of the Kociemba algorithm comes from a space-time tradeoff. It relies on large pre-computed lookup tables, often called pruning tables. These tables store the minimum number of moves required to solve different cube patterns, allowing the algorithm to "prune" search branches that won't lead to optimal solutions. These tables can occupy a significant amount of memory, ranging from a few to several hundred megabytes, depending on the implementation's sophistication.</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>Our Implementation Approach</h2>
+                    <p>This project integrates a frontend 3D visualization with a powerful backend solver:</p>
+                    <ul>
+                        <li><strong>Frontend:</strong> A dynamic and interactive 3D model of the Rubik's Cube is rendered using <strong>Three.js</strong>, providing a rich user experience.</li>
+                        <li><strong>Backend:</strong> A Python server, built with <strong>Flask</strong>, manages the cube's state. Upon a solve request, the server utilizes the <code>pykociemba</code> library to calculate the solution sequence based on the cube's current state string.</li>
+                        <li><strong>Communication:</strong> The frontend communicates with the backend via asynchronous requests. The solution moves are sent back to the client to be animated on the 3D model.</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>Key Challenges & Solutions</h2>
+                    <p>A primary hurdle was the meticulous mapping between the visual 3D representation and the one-dimensional string format required by the Kociemba solver. Maintaining perfect synchronization between the frontend animation and the backend state during each move required robust state management and careful sequencing of operations on both the client and server.</p>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='cube.js') }}"></script>
-    <script>
-    // Initialize the cube when the page loads
-    let cube;
-    window.addEventListener('DOMContentLoaded', () => {
-        cube = new RubiksCube();
-    });
-    </script>
 </body>
 </html>

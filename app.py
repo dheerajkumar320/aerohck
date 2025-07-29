@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import pykociemba
 import random
-
+import time
 app = Flask(__name__)
 
 # Store cube state globally (in production, use proper session management)
@@ -14,22 +14,51 @@ def index():
 @app.route('/shuffle', methods=['POST'])
 def shuffle_cube():
     global current_cube_state
-    # Generate a random cube state
-    current_cube_state = pykociemba.randomCube()
-    return jsonify({'state': current_cube_state})
+    # Generate a random scramble of 20 moves
+    moves = ["U", "D", "L", "R", "F", "B"]
+    modifiers = ["", "'", "2"]
+    scramble_moves = " ".join([random.choice(moves) + random.choice(modifiers) for _ in range(20)])
+    
+    # Apply the scramble to the solved state
+    try:
+        # pykociemba.solve can also be used to apply moves to a state
+        # We "solve" the solved state with the scramble sequence to get the shuffled state
+        solved_state = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB"
+        current_cube_state = pykociemba.solve(solved_state, scramble_moves)
+        return jsonify({'state': current_cube_state, 'scramble': scramble_moves})
+    except Exception as e:
+        # Fallback to randomCube if the scramble application fails
+        current_cube_state = pykociemba.randomCube()
+        return jsonify({'state': current_cube_state, 'scramble': 'N/A (fallback)'})
 
 @app.route('/solve', methods=['POST'])
 def solve_cube():
     global current_cube_state
     try:
-        # Validate cube state format
         if len(current_cube_state) != 54:
             return jsonify({'error': 'Invalid cube state length'})
 
-        solution = pykociemba.solve(current_cube_state)
+        start_time = time.time()
+        solution = pykociemba.solve(current_cube_state, use_separator=True)
+        end_time = time.time()
+
         if solution.startswith("Error"):
             return jsonify({'error': solution})
-        return jsonify({'solution': solution})
+
+        solve_time_ms = (end_time - start_time) * 1000
+        
+        parts = solution.split(' . ')
+        phase1_moves = len(parts[0].split())
+        phase2_moves = len(parts[1].split()) if len(parts) > 1 else 0
+        solution_length = phase1_moves + phase2_moves
+
+        return jsonify({
+            'solution': solution.replace(' . ', ' '),
+            'solve_time': round(solve_time_ms, 2),
+            'solution_length': solution_length,
+            'phase1_moves': phase1_moves,
+            'phase2_moves': phase2_moves
+        })
     except Exception as e:
         return jsonify({'error': f'Solver error: {str(e)}'})
 
