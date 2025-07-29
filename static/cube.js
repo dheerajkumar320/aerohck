@@ -3,18 +3,17 @@ class RubiksCube {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        const container = document.getElementById('container');
+        this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.setClearColor(0x000000, 0);
         document.getElementById('container').appendChild(this.renderer.domElement);
         
-        // Create debug screen
-        this.createDebugScreen();
 
         // Add lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
         directionalLight.position.set(10, 10, 5);
         this.scene.add(directionalLight);
 
@@ -38,7 +37,7 @@ class RubiksCube {
             'R': 0xff0000, // Red - Right  
             'F': 0x00ff00, // Green - Front
             'D': 0xffff00, // Yellow - Down
-            'L': 0xff8000, // Orange - Left
+            'L': 0xffa500, // Orange - Left
             'B': 0x0000ff  // Blue - Back
         };
 
@@ -64,116 +63,7 @@ class RubiksCube {
         }
     }
 
-    createDebugScreen() {
-        // Create debug container
-        let debugDiv = document.getElementById('debugScreen');
-        if (!debugDiv) {
-            debugDiv = document.createElement('div');
-            debugDiv.id = 'debugScreen';
-            debugDiv.style.position = 'fixed';
-            debugDiv.style.top = '10px';
-            debugDiv.style.right = '10px';
-            debugDiv.style.width = '260px';
-            debugDiv.style.height = '220px';
-            debugDiv.style.background = 'rgba(30,30,30,0.95)';
-            debugDiv.style.color = '#fff';
-            debugDiv.style.fontSize = '13px';
-            debugDiv.style.zIndex = '1000';
-            debugDiv.style.borderRadius = '8px';
-            debugDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-            debugDiv.style.padding = '12px';
-            debugDiv.innerHTML = `
-                <div style="font-weight:bold;margin-bottom:6px;">Debug Info</div>
-                <div id="debugCubeState" style="word-break:break-all;margin-bottom:8px;"></div>
-                <div id="debugMoves" style="margin-bottom:8px;"></div>
-                <div id="debugStatus"></div>
-            `;
-            document.body.appendChild(debugDiv);
-        }
-        this.updateDebugScreen();
-    }
 
-    updateDebugScreen(stateString = this.currentStateString, moves = this.currentMoves, status = this.currentDebugStatus) {
-        document.getElementById('debugCubeState').textContent = `Cube State: ${stateString || ''}`;
-        document.getElementById('debugMoves').textContent = `Moves: ${moves ? moves.join(' ') : ''}`;
-        document.getElementById('debugStatus').textContent = `Status: ${status || ''}`;
-    }
-
-    debugFaceMapping() {
-        if (!this.currentStateString) return;
-        
-        const faces = {
-            U: this.currentStateString.substring(0, 9),
-            R: this.currentStateString.substring(9, 18),
-            F: this.currentStateString.substring(18, 27),
-            D: this.currentStateString.substring(27, 36),
-            L: this.currentStateString.substring(36, 45),
-            B: this.currentStateString.substring(45, 54)
-        };
-        
-        console.log('=== FACE MAPPING DEBUG ===');
-        console.log('Current state:', this.currentStateString);
-        console.log('Face breakdown:', faces);
-        
-        // Check if all faces have valid colors
-        const validColors = ['U', 'R', 'F', 'D', 'L', 'B'];
-        for (const [faceName, faceState] of Object.entries(faces)) {
-            const invalidChars = faceState.split('').filter(c => !validColors.includes(c));
-            if (invalidChars.length > 0) {
-                console.error(`Invalid characters in ${faceName} face:`, invalidChars);
-            }
-        }
-        
-        // Count solved faces
-        let solvedFaces = 0;
-        for (const [faceName, faceState] of Object.entries(faces)) {
-            const uniqueColors = [...new Set(faceState)];
-            if (uniqueColors.length === 1) {
-                solvedFaces++;
-                console.log(`${faceName} face is solved: ${uniqueColors[0]}`);
-            } else {
-                console.log(`${faceName} face is not solved. Colors:`, uniqueColors);
-            }
-        }
-        
-        console.log(`Solved faces: ${solvedFaces}/6`);
-        console.log('=== END DEBUG ===');
-    }
-
-    testSolvedState() {
-        // Test with a known solved state
-        const solvedState = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB";
-        console.log("=== TESTING SOLVED STATE ===");
-        this.updateCubeFromState(solvedState);
-        
-        // Check if all faces are solved
-        const faces = {
-            U: solvedState.substring(0, 9),
-            R: solvedState.substring(9, 18),
-            F: solvedState.substring(18, 27),
-            D: solvedState.substring(27, 36),
-            L: solvedState.substring(36, 45),
-            B: solvedState.substring(45, 54)
-        };
-        
-        let allSolved = true;
-        for (const [faceName, faceState] of Object.entries(faces)) {
-            const uniqueColors = [...new Set(faceState)];
-            if (uniqueColors.length !== 1) {
-                console.error(`${faceName} face should be solved but has ${uniqueColors.length} colors:`, uniqueColors);
-                allSolved = false;
-            } else {
-                console.log(`${faceName} face is correctly solved: ${uniqueColors[0]}`);
-            }
-        }
-        
-        if (allSolved) {
-            console.log("✅ All faces are correctly solved!");
-        } else {
-            console.log("❌ Some faces are not solved correctly");
-        }
-        console.log("=== END SOLVED STATE TEST ===");
-    }
 
     initializeCube() {
         // Clear existing pieces
@@ -298,8 +188,6 @@ class RubiksCube {
             }
         });
         
-        this.updateDebugScreen();
-        this.debugFaceMapping(); // Add debug logging
     }
 
     async shuffleCube() {
@@ -385,7 +273,6 @@ class RubiksCube {
             if (moves[i]) {
                 console.log(`🔍 Processing move ${i + 1}/${moves.length}: ${moves[i]}`);
                 this.currentDebugStatus = `Move ${i + 1}/${moves.length}: ${moves[i]}`;
-                this.updateDebugScreen();
                 
                 // Apply move to backend
                 try {
@@ -415,14 +302,12 @@ class RubiksCube {
         }
         console.log('🔍 ANIMATE SOLUTION COMPLETED');
         this.currentDebugStatus = 'Solution animation complete!';
-        this.updateDebugScreen();
         this.updateStatus('Solution animation complete!', '#4CAF50');
     }
 
     async animateMove(move) {
         if (!move || move === '') return;
         this.currentDebugStatus = `Performing move: ${move}`;
-        this.updateDebugScreen();
         const face = move[0];
         const isPrime = move.includes("'");
         const isDouble = move.includes('2');
@@ -547,8 +432,7 @@ class RubiksCube {
             this.isAnimating = true;
             this.currentMoves = this.currentMoves || [];
             this.currentMoves.push(moveString);
-            this.currentDebugStatus = `Manual move: ${moveString}`;
-            this.updateDebugScreen();
+        this.currentDebugStatus = `Manual move: ${moveString}`;
             
             try {
                 // Send move to backend
@@ -571,7 +455,6 @@ class RubiksCube {
             await this.animateMove(moveString);
             this.updateStatus(`Executed move: ${moveString}`, '#4CAF50');
             this.isAnimating = false;
-            this.updateDebugScreen();
         }
     }
 
@@ -587,13 +470,6 @@ class RubiksCube {
         const statusElement = document.getElementById('status');
         statusElement.textContent = message;
         statusElement.style.color = color;
-    }
-
-    resetView() {
-        this.camera.position.set(5, 5, 5);
-        this.cubeGroup.rotation.set(0, 0, 0);
-        this.controls.reset();
-        this.updateStatus('View reset', '#4CAF50');
     }
 
     setupEventListeners() {
@@ -613,17 +489,6 @@ class RubiksCube {
             if (!this.isAnimating) this.solveCube();
         });
 
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            this.resetView();
-        });
-
-        document.getElementById('debugBtn').addEventListener('click', () => {
-            this.debugFaceMapping();
-        });
-
-        document.getElementById('testSolvedBtn').addEventListener('click', () => {
-            this.testSolvedState();
-        });
 
         // Add manual move controls
         document.addEventListener('keydown', (event) => {
