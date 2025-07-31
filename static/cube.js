@@ -400,6 +400,8 @@ class RubiksCube {
             }
         });
     }
+    
+// ...existing code...
 
     setupEventListeners() {
         if (this.eventListenersAttached) return;
@@ -438,3 +440,4 @@ window.addEventListener('DOMContentLoaded', () => {
         window.cubeInstance = new RubiksCube();
     }
 });
+

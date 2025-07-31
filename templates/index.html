@@ -193,6 +193,7 @@
         </header>
 
         <div id="content-area">
+            <!-- Cube Notations will be placed below the graph instead -->
             <div id="cube-section">
                 <div id="container"></div>
                 <div id="controls">
@@ -207,7 +208,12 @@
                     <div class="stat-item"><strong>Solve Time:</strong> <span id="solveTime">N/A</span></div>
                     <div class="stat-item"><strong>Solution Length:</strong> <span id="solutionLength">N/A</span></div>
                 </div>
+
                 <canvas id="solutionChart" width="400" height="100"></canvas>
+                <div id="cubeNotationSection" style="text-align:center;margin:32px 0 0 0;width:100%;">
+                    <div style="font-size:2em;font-weight:700;margin-bottom:18px;letter-spacing:1px;">Cube Notations</div>
+                    <img src="{{ url_for('static', filename='cube_notation.png') }}" alt="Cube Notations" style="display:block;margin:0 auto;max-width:1000px;width:100%;height:auto;border-radius:16px;box-shadow:0 4px 24px #0003;background:#fff;">
+                </div>
             </div>
 
             <div id="info-section">
