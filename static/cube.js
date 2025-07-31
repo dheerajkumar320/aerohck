@@ -155,6 +155,11 @@ class RubiksCube {
         this.updateStatus('Getting scramble...', '#ff9800');
         document.getElementById('solveTime').textContent = 'N/A';
         document.getElementById('solutionLength').textContent = 'N/A';
+        document.getElementById('solutionString').style.display = 'none';
+        let scrambleDiv = document.getElementById('scrambleString');
+        if (scrambleDiv) {
+            scrambleDiv.textContent = '';
+        }
         if (this.solutionChart) {
             this.solutionChart.destroy();
             this.solutionChart = null;
@@ -187,7 +192,7 @@ class RubiksCube {
         }
         this.isAnimating = false;
         // Print scramble moves just above the solution string
-        let scrambleDiv = document.getElementById('scrambleString');
+        scrambleDiv = document.getElementById('scrambleString');
         if (!scrambleDiv) {
             scrambleDiv = document.createElement('div');
             scrambleDiv.id = 'scrambleString';
@@ -440,4 +445,3 @@ window.addEventListener('DOMContentLoaded', () => {
         window.cubeInstance = new RubiksCube();
     }
 });
-
