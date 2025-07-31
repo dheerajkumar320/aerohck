@@ -186,6 +186,22 @@ class RubiksCube {
             this.updateStatus('Error getting scramble.', '#f44336');
         }
         this.isAnimating = false;
+        // Print scramble moves just above the solution string
+        let scrambleDiv = document.getElementById('scrambleString');
+        if (!scrambleDiv) {
+            scrambleDiv = document.createElement('div');
+            scrambleDiv.id = 'scrambleString';
+            scrambleDiv.style.fontWeight = 'bold';
+            scrambleDiv.style.fontSize = '1.2em';
+            scrambleDiv.style.margin = '10px 0 0 0';
+            scrambleDiv.style.color = '#ff9800'; // Orange color for scramble
+            // Place above the solution string
+            const solutionDiv = document.getElementById('solutionString');
+            if (solutionDiv && solutionDiv.parentNode) {
+                solutionDiv.parentNode.insertBefore(scrambleDiv, solutionDiv);
+            }
+        }
+        scrambleDiv.textContent = `Scramble: ${this.currentScramble}`;
     }
 
     async solveCube() {
@@ -228,11 +244,24 @@ class RubiksCube {
                 document.getElementById('solutionLength').textContent = `${solveData.solution_length} moves`;
                 this.renderSolutionChart(solveData.phase1_moves, solveData.phase2_moves);
                 this.updateStatus(`Solution Found: ${solveData.solution}`, '#4CAF50');
-                solutionDiv.textContent = `Solution: ${solveData.solution}`;
+
+                // Color phase 1 and phase 2 moves differently
+                const moves = solveData.solution.trim().split(' ').filter(move => move);
+                const phase1 = solveData.phase1_moves || 0;
+                const phase2 = solveData.phase2_moves || 0;
+                let html = '';
+                for (let i = 0; i < moves.length; i++) {
+                    if (i < phase1) {
+                        html += `<span style=\"color:#e53935;font-weight:bold;\">${moves[i]}</span> `; // Nice red
+                    } else {
+                        html += `<span style=\"color:#2196F3;font-weight:bold;\">${moves[i]}</span> `;
+                    }
+                }
+                solutionDiv.innerHTML = `Solution: ${html.trim()}`;
                 solutionDiv.style.display = 'block';
-                
+
                 await this.animateSolution(solveData.solution);
-                this.currentScramble = ''; // Clear scramble after solving
+                this.currentScramble = '';
             } else {
                 this.updateStatus(solveData.error || 'Error solving cube', '#f44336');
                 solutionDiv.style.display = 'none';
@@ -360,8 +389,8 @@ class RubiksCube {
             data: {
                 labels: ['Solution'],
                 datasets: [
-                    { label: 'Phase 1 Moves', data: [phase1Moves], backgroundColor: 'rgba(255, 142, 83, 0.7)' },
-                    { label: 'Phase 2 Moves', data: [phase2Moves], backgroundColor: 'rgba(37, 117, 252, 0.7)' }
+                    { label: 'Phase 1 Moves', data: [phase1Moves], backgroundColor: 'rgba(229,57,53,0.8)', borderColor: '#e53935', borderWidth: 2 },
+                    { label: 'Phase 2 Moves', data: [phase2Moves], backgroundColor: 'rgba(37, 117, 252, 0.7)', borderColor: '#2196F3', borderWidth: 2 }
                 ]
             },
             options: {
